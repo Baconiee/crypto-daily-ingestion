@@ -29,6 +29,7 @@ def start_run(conn, extracted_at):
 
         return run_id
 
+
 def load_bronze_layer_data(conn, run_id, payload):
     values = [(run_id, Json(row)) for row in payload]
     with conn.cursor() as cur:
@@ -41,3 +42,30 @@ def load_bronze_layer_data(conn, run_id, payload):
             values
         )
     conn.commit()
+
+def load_silver_layer_data(conn, silver_rows):
+    cols = [
+        "run_id", "coin_id", "symbol", "name", "current_price",
+        "market_cap", "market_cap_rank", "fully_diluted_valuation",
+        "total_volume", "high_24h", "low_24h", "price_change_24h",
+        "price_change_percentage_24h", "market_cap_change_24h",
+        "market_cap_change_percentage_24h", "circulating_supply",
+        "total_supply", "max_supply", "ath", "ath_change_percentage",
+        "ath_date", "atl", "atl_change_percentage", "atl_date",
+        "last_updated",
+    ]
+
+    values = [tuple(row[col] for col in cols) for row in silver_rows]
+
+    with conn.cursor() as cur:
+        execute_values(
+            cur,
+            f"""
+            INSERT INTO silver_crypto_market_snapshots ({", ".join(cols)})
+            VALUES %s   
+            """,
+            values
+        )
+
+    conn.commit()
+
