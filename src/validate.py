@@ -1,36 +1,41 @@
+from datetime import datetime, timezone
+
 
 def validate_data(data):
-    required_fields = ["id", "symbol", "name", "image"]
-
     expected_types = {
         "id": str,
         "symbol": str,
         "name": str,
-        "image": str
+        "image": str,
     }
 
-    valid_crypto_data = []
-    invalid_crypto_data = []
+    valid_rows = []
+    rejected_rows = []
 
-    for crypto_symbol in data:
-        reason = ""
+    for row in data:
+        reasons = []
 
-        for field in required_fields:
-            if field not in crypto_symbol or crypto_symbol[field] is None:
-                reason += f"{field} is missing or None\n"
-                continue
+        for field, expected_type in expected_types.items():
+            value = row.get(field)
 
-            if not isinstance(crypto_symbol[field], expected_types[field]):
-                reason += (
+            if value is None:
+                reasons.append(f"{field} is missing or None")
+                rejected_at = datetime.now(timezone.utc)
+            elif not isinstance(value, expected_type):
+                reasons.append(
                     f"{field} has invalid type. "
-                    f"Expected {expected_types[field].__name__}, "
-                    f"got {type(crypto_symbol[field]).__name__}\n"
+                    f"Expected {expected_type.__name__}, "
+                    f"got {type(value).__name__}"
                 )
+                rejected_at = datetime.now(timezone.utc)
 
-        if reason:
-            crypto_symbol["reason"] = reason
-            invalid_crypto_data.append(crypto_symbol)
+        if reasons:
+            rejected_rows.append({
+                "raw_payload": row,                
+                "reject_reason": "; ".join(reasons),
+                "rejected_at": rejected_at
+            })
         else:
-            valid_crypto_data.append(crypto_symbol)
+            valid_rows.append(row)
 
-    return valid_crypto_data, invalid_crypto_data, len(data)
+    return valid_rows, rejected_rows, len(data)
